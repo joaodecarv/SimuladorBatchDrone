@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/include/eigen3",
+                "/usr/include/eigen3/unsupported",
+                "/usr/include",
+                "/usr/include/python3.12",
+                "/usr/local/include",
+                "/usr/include/glm",
+                "/opt/ros/jazzy/include/**",
+                "${workspaceFolder}/src/Meu_nohEVTOL/include",
+                "${workspaceFolder}/install/Meu_nohEVTOL/include/**",
+                "${workspaceFolder}/install/px4_msgs/include/**",
+                "${workspaceFolder}/install/custom_msgs/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compileCommands": "${workspaceFolder}/build/Meu_nohEVTOL/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

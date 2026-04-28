@@ -1,0 +1,180 @@
+Comandos para usar o ROS2 (deixar tudo configurado)
+
+    source /opt/ros/jazzy/setup.bash (ativa o ros2 e as bibliotecas)
+    colcon build (compila os programas)
+        colcon build --packages-select
+        colcon build --symlink-install (evita ficar recriando os pacotes em python se fizer alguma mudanca)
+    source install/setup.bash
+
+
+
+
+Como trocar a FSM que vai ser utilizada
+    Substitua src/my_fsm.cpp pelo faseX.cpp da fsm da competicao e faca essas mudancas
+        // 1. REMOVA a linha:
+        Drone* drone = new Drone();
+
+        // 2. MUDE o construtor para receber o drone como parâmetro:
+        class MeuFSM : public fsm::FSM {
+            MeuFSM(Drone* passed_drone) : fsm::FSM({"ERROR", "FINISHED"}) {
+                this->blackboard_set<Drone>("drone", passed_drone);  // ← usa passed_drone
+                ...
+            }
+        };
+
+        // 3. ADICIONE no final do arquivo:
+        std::unique_ptr<fsm::FSM> create_fsm(Drone* drone) {
+            return std::make_unique<MeuFSM>(drone);
+        }
+Para rodar o simulador
+
+    colcon build --packages-select Meu_nohEVTOL
+    ros2 run Meu_nohEVTOL batch_simulator \ --ros-args -p num_drones:=4 -p sim_steps:=2000 -p dt:=0.05
+
+
+
+
+
+
+Para modificar a arena, va para src/batch_simulator.cpp
+
+    static Arena build_default_arena()
+    {
+        Arena arena;
+        arena.size_x = 30.0;
+        arena.size_y = 30.0;
+        arena.landing_radius = 1.5;
+
+        // Bases
+        {Base b; b.id="B0"; b.position=Eigen::Vector3d( 5.0,  5.0, 0.0); b.active=true; arena.bases.push_back(b);}
+        // ...
+
+        // ← ADICIONE OBSTÁCULOS AQUI:
+        {
+            Obstacle obs;
+            obs.name   = "predio_central";
+            obs.position = Eigen::Vector3d(15.0, 15.0, 0.0);  // centro base
+            obs.width  = 3.0;   // m (eixo X)
+            obs.length = 3.0;   // m (eixo Y)
+            obs.height = 8.0;   // m (eixo Z)
+            arena.obstacles.push_back(obs);
+        }
+
+        return arena;
+    }
+
+    a definicao do obstaculo esta assim 
+
+    struct Obstacle 
+    {
+    Eigen::Vector3d position;  // centro da base do obstáculo
+    double width;              // m, eixo X
+    double length;             // m, eixo Y
+    double height;             // m, eixo Z
+    std::string name;
+    };
+
+
+
+
+
+
+
+como adicionar bases?
+    Em src/batch_simulator.cpp, na função build_default_arena()
+    static Arena build_default_arena()
+{
+    Arena arena;
+    arena.size_x = 30.0;          // largura da arena em X (m)
+    arena.size_y = 30.0;          // largura da arena em Y (m)
+    arena.landing_radius = 1.5;   // distância máxima do centro da base para contar como pouso (m)
+
+    // ── Bases ─────────────────────────────────────────────────────────────
+    // Edite posições, adicione ou remova bases aqui:
+    {Base b; b.id="B0"; b.position=Eigen::Vector3d(5.0,  5.0, 0.0); b.active=true; arena.bases.push_back(b);}
+    {Base b; b.id="B1"; b.position=Eigen::Vector3d(25.0, 5.0, 0.0); b.active=true; arena.bases.push_back(b);}
+    // ... adicione mais:
+    {Base b; b.id="B4"; b.position=Eigen::Vector3d(15.0, 15.0, 0.0); b.active=true; arena.bases.push_back(b);}
+
+    return arena;
+}
+
+
+
+
+
+como usar o heatmap?
+
+    # Instalar dependências (uma vez só)
+    pip install matplotlib numpy pandas
+
+    # Gerar heatmap + perfil de altitude
+    python3 src/Meu_nohEVTOL/scripts/plot_heatmap.py /tmp/minha_simulacao.csv
+
+    # Salvar em PNG sem abrir janela
+    python3 src/Meu_nohEVTOL/scripts/plot_heatmap.py /tmp/minha_simulacao.csv -o resultado.png
+
+    # Só o perfil de altitude
+    python3 src/Meu_nohEVTOL/scripts/plot_heatmap.py /tmp/minha_simulacao.csv --mode altitude
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓████████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒███████████████████████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒███████████████████████████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒██████████████████████████████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒█████████████████████████████████▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒██████████████████████████████████████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒████████████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓██████████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒█████████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓████████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓████████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓██████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒███████▓▓▓▓▓▓██████▓▓▓▓▓████████████▓█████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒██████▓▓█████████████▓▓▓██████████████████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓█████▓▓███▓████████▓▓▓▓███████████▓▓▓████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒█████▓▓▓███████▓███▓▓▓▓▓██████▓██▓▓▓▓███▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒████▓▓▓▓▓▓▓▓██▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒█▓██▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██▓█▓███▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓███▓█▓▓█▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓████████████████▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓███▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓██▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒█▓▓███▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█████▓██▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒██▓▓▓▓▓▓████████▓███████▓▓▓▓▓▓███▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▓████████▒▒▒████████▒▒▒▒▒▒▒█████▒▒▒▒████▒▒▒█████▒▒▒▓███████▒▒▒▒▓████▓▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▓█▓▒▒▒▓██▒▒▒██▒▒▒▒██▓▒▒▒██▓▒▒▒███▒▒▒████▒▒▒██▒▒▒███▒▒▒▒███▒▒███▒▒▒███▒▒▒▒\n"
+      "▒▒▒▒▒▒██▒▒▒▒▓██▒▒▒██▒▒▒▒██▒▒▓██▒▒▒▒▒▒██▒▒▒████▓▒▒██▒▒██▒▒▒▒▒▒▒▓▒▒██▒▒▒▒▒▒██▓▒▒▒\n"
+      "▒▒▒▒▒▒████████▒▒▒▓███████▒▒▒██▒▒▒▒▒▒▒██▒▒▓█▓▒██▒▒██▒▓█▓▒▒▒▒▒▒▒▒▒██▒▒▒▒▒▒▒██▒▒▒▒\n"
+      "▒▒▒▒▒▓█▓▒▒▒▒▓██▒▒██▒▒▓██▓▒▒▒██▒▒▒▒▒▒██▓▒▒██▒▒▒████▒▒██▒▒▒▒▒▒▒▒▒▒██▒▒▒▒▒▒▓██▒▒▒▒\n"
+      "▒▒▒▒▒██▒▒▒▒▒██▓▒▒██▒▒▒▒██▓▒▒▓██▓▒▒███▒▒▒▒██▒▒▒▓███▒▒▒███▒▒▒▓██▒▒▓██▓▒▒▓██▒▒▒▒▒▒\n"
+      "▒▒▒█████████▓▒▒█████▒▒▒▒███▒▒▒████▓▒▒▒▒█████▒▒▒██▓▒▒▒▒▓█████▒▒▒▒▒▒▓███▓▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n"
+      "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒\n\n"
+   );

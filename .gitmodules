@@ -1,0 +1,10 @@
+[submodule "src/custom_msgs"]    
+    path = src/custom_msgs
+    url = https://github.com/Equipe-eVTOL-ITA/custom_msgs.git
+
+    
+[submodule "src/px4_msgs"]
+    path = src/px4_msgs
+    url = https://github.com/PX4/px4_msgs.git
+    branch = release/1.15
+    
